@@ -2,6 +2,7 @@ module Main exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 import Http
 import Json.Decode
 import Json.Decode.Pipeline
@@ -113,7 +114,7 @@ busPredictionDecoder =
     Json.Decode.Pipeline.decode BusPrediction
         |> Json.Decode.Pipeline.required "stop_id" Json.Decode.string
         |> Json.Decode.Pipeline.required "stop_name" Json.Decode.string
-        |> Json.Decode.Pipeline.required "mode" modeListDecoder
+        |> Json.Decode.Pipeline.optional "mode" modeListDecoder []
 
 
 modeListDecoder : Json.Decode.Decoder (List Mode)
@@ -189,6 +190,7 @@ init =
 
 type Msg
     = ProcessBusPredictionGet (Result Http.Error BusPrediction)
+    | Update
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -207,6 +209,9 @@ update msg model =
                 , prediction = Nothing
             }
                 ! []
+
+        Update ->
+            model ! [ get stopId ]
 
 
 
@@ -231,14 +236,20 @@ view : Model -> Html Msg
 view model =
     case model.prediction of
         Nothing ->
-            div [] []
+            div []
+                [ div [] [ text "No scheduled busses found" ]
+                , div [ onClick Update ] [ button [] [ text "Refresh" ] ]
+                ]
 
         Just things ->
             div []
-                (things
-                    |> busAdapter
-                    |> List.map singleBus
-                )
+                [ div []
+                    (things
+                        |> busAdapter
+                        |> List.map singleBus
+                    )
+                , div [ onClick Update ] [ button [] [ text "Refresh" ] ]
+                ]
 
 
 
