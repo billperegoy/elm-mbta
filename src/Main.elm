@@ -2,7 +2,6 @@ module Main exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Utils
 import Http
 import Json.Decode
 import Json.Decode.Pipeline
@@ -33,6 +32,45 @@ get stopId =
             "http://realtime.mbta.com/developer/api/v2/predictionsbystop?format=json&api_key=" ++ apiKey ++ "&stop=" ++ stopId
     in
         Http.send ProcessBusPredictionGet (Http.get url busPredictionDecoder)
+
+
+busAdapter : BusPrediction -> List UpcomingBus
+busAdapter prediction =
+    case prediction.modes of
+        [] ->
+            []
+
+        [ mode ] ->
+            case mode.routes of
+                [] ->
+                    []
+
+                [ route ] ->
+                    case route.directions of
+                        [] ->
+                            []
+
+                        [ direction ] ->
+                            List.map (\trip -> UpcomingBus route.routeName trip.tripName (trip.preAway |> String.toInt |> Result.withDefault 0)) direction.trips
+
+                        -- FIXME - error case
+                        _ ->
+                            []
+
+                -- FIXME - error case
+                _ ->
+                    []
+
+        -- FIXME - error case
+        _ ->
+            []
+
+
+type alias UpcomingBus =
+    { busName : String
+    , routeName : String
+    , waitTime : Int
+    }
 
 
 type alias BusPrediction =
@@ -175,10 +213,32 @@ update msg model =
 -- View
 
 
+singleBus : UpcomingBus -> Html Msg
+singleBus elem =
+    div []
+        [ text
+            (elem.busName
+                ++ " -> "
+                ++ elem.routeName
+                ++ "  comes in "
+                ++ toString (elem.waitTime // 60)
+                ++ " minutes"
+            )
+        ]
+
+
 view : Model -> Html Msg
 view model =
-    h1 []
-        [ text "Hello" ]
+    case model.prediction of
+        Nothing ->
+            div [] []
+
+        Just things ->
+            div []
+                (things
+                    |> busAdapter
+                    |> List.map singleBus
+                )
 
 
 
