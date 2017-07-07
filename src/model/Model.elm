@@ -22,6 +22,16 @@ type Msg
     | Update
 
 
+convertTrip : Route -> Trip -> UpcomingBus
+convertTrip route trip =
+    UpcomingBus route.routeName
+        trip.tripName
+        (trip.preAway
+            |> String.toInt
+            |> Result.withDefault 0
+        )
+
+
 busAdapter : BusPrediction -> List UpcomingBus
 busAdapter prediction =
     case prediction.modes of
@@ -39,7 +49,7 @@ busAdapter prediction =
                             []
 
                         [ direction ] ->
-                            List.map (\trip -> UpcomingBus route.routeName trip.tripName (trip.preAway |> String.toInt |> Result.withDefault 0)) direction.trips
+                            List.map (convertTrip route) direction.trips
 
                         -- FIXME - error case
                         _ ->
